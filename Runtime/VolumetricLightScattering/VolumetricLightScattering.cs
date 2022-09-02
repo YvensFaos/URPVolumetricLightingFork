@@ -32,7 +32,7 @@ namespace Voxell.VolumetricLighting
 
     class LightScatteringPass : ScriptableRenderPass
     {
-      private readonly RenderTargetHandle _occluders = RenderTargetHandle.CameraTarget;
+      private RenderTargetHandle _occluders = RenderTargetHandle.CameraTarget;
       private readonly VolumetricLightScatteringSettings _settings;
       private readonly List<ShaderTagId> _shaderTagIdList = new List<ShaderTagId>();
       private Material _occludersMaterial;
@@ -111,8 +111,9 @@ namespace Voxell.VolumetricLighting
           CommandBufferPool.Release(cmd);
 
           float3 sunDirectionWorldSpace = RenderSettings.sun.transform.forward;
-          float3 cameraDirectionWorldSpace = camera.transform.forward;
-          float3 cameraPositionWorldSpace = camera.transform.position;
+          var transform = camera.transform;
+          float3 cameraDirectionWorldSpace = transform.forward;
+          float3 cameraPositionWorldSpace = transform.position;
           float3 sunPositionWorldSpace = cameraPositionWorldSpace + sunDirectionWorldSpace;
           float3 sunPositionViewportSpace = camera.WorldToViewportPoint(sunPositionWorldSpace);
 
@@ -121,17 +122,17 @@ namespace Voxell.VolumetricLighting
           float intensityFader = dotProd / _settings.fadeRange;
           intensityFader = math.saturate(intensityFader);
 
-          _radialBlurMaterial.SetColor("_Color", RenderSettings.sun.color);
-          _radialBlurMaterial.SetVector("_Center", new Vector4(
+          _radialBlurMaterial.SetColor(Color1, RenderSettings.sun.color);
+          _radialBlurMaterial.SetVector(Center, new Vector4(
             sunPositionViewportSpace.x, sunPositionViewportSpace.y, 0.0f, 0.0f
           ));
-          _radialBlurMaterial.SetFloat("_BlurWidth", _settings.blurWidth);
-          _radialBlurMaterial.SetFloat("_NumSamples", _settings.numSamples);
-          _radialBlurMaterial.SetFloat("_Intensity", _settings.intensity * intensityFader);
+          _radialBlurMaterial.SetFloat(BlurWidth, _settings.blurWidth);
+          _radialBlurMaterial.SetFloat(NumSamples, _settings.numSamples);
+          _radialBlurMaterial.SetFloat(Intensity, _settings.intensity * intensityFader);
 
-          _radialBlurMaterial.SetVector("_NoiseSpeed", new float4(_settings.noiseSpeed, 0.0f, 0.0f));
-          _radialBlurMaterial.SetFloat("_NoiseScale", _settings.noiseScale);
-          _radialBlurMaterial.SetFloat("_NoiseStrength", _settings.noiseStrength);
+          _radialBlurMaterial.SetVector(NoiseSpeed, new float4(_settings.noiseSpeed, 0.0f, 0.0f));
+          _radialBlurMaterial.SetFloat(NoiseScale, _settings.noiseScale);
+          _radialBlurMaterial.SetFloat(NoiseStrength, _settings.noiseStrength);
 
           Blit(cmd, _occluders.Identifier(), _cameraColorTargetIdent, _radialBlurMaterial);
         }
@@ -152,6 +153,14 @@ namespace Voxell.VolumetricLighting
 
     private LightScatteringPass _scriptablePass;
     public VolumetricLightScatteringSettings _settings =  new VolumetricLightScatteringSettings();
+    private static readonly int Color1 = Shader.PropertyToID("_Color");
+    private static readonly int Center = Shader.PropertyToID("_Center");
+    private static readonly int BlurWidth = Shader.PropertyToID("_BlurWidth");
+    private static readonly int NumSamples = Shader.PropertyToID("_NumSamples");
+    private static readonly int Intensity = Shader.PropertyToID("_Intensity");
+    private static readonly int NoiseSpeed = Shader.PropertyToID("_NoiseSpeed");
+    private static readonly int NoiseScale = Shader.PropertyToID("_NoiseScale");
+    private static readonly int NoiseStrength = Shader.PropertyToID("_NoiseStrength");
 
     /// <inheritdoc/>
     public override void Create()
